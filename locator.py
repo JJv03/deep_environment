@@ -7,7 +7,7 @@ from gazebo_msgs.msg import ModelStates
 def callback(data):
     # Verifica si el robot está en la lista de modelos
     try:
-        robot_index = data.name.index('x4')
+        robot_index = data.name.index('racecar')
 
         # Extraer y mostrar solo la posición y orientación (pose)
         position = data.pose[robot_index].position
