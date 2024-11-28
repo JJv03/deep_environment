@@ -3,23 +3,23 @@ from gymnasium import spaces
 import numpy as np
 
 
-class MiEntorno(gym.Env):
+class Deepracer(gym.Env):
     """
     Clase personalizada para un entorno Gymnasium.
     Este entorno simula un coche que se mueve en un espacio 3D,
     con velocidad y angulación de las ruedas afectando su trayectoria.
     """
     def __init__(self):
-        super(MiEntorno, self).__init__()
+        super(Deepracer, self).__init__()
         
         # Espacio de observaciones: [X, Y, Z, angulación, velocidad]
         # X, Y, Z están en el rango [-1, 1], angulación en [-30, 30] grados, velocidad en [0, 1].
-        self.observation_space = spaces.Box(
-            low=np.array([-1, -1, -1, -30, 0]),
-            high=np.array([1, 1, 1, 30, 1]),
-            dtype=np.float32
-        )
-        
+        self.x = np.random.uniform(low=-1, high=1)
+        self.y = 0.0
+        self.z = 0.0
+        self.angulacion = 0.0
+        self.velocidad = 0.0
+
         # Espacio de acciones: 3 acciones posibles (0: izquierda, 1: recto, 2: derecha)
         self.action_space = spaces.Discrete(3)
         
@@ -29,7 +29,7 @@ class MiEntorno(gym.Env):
         self.current_step = 0
         
         # Parámetros del entorno
-        self.centro_ideal = np.array([0, 0, 0])  # Posición ideal en el espacio 3D
+        self.centro_ideal = 0  # Posición ideal en el espacio 3D
 
     def reset(self):
         """
@@ -55,9 +55,11 @@ class MiEntorno(gym.Env):
         done = self.current_step >= self.max_steps  # Termina el episodio después de max_steps
 
         # Extraer componentes del estado actual
-        posicion = self.state[:3]
-        angulacion = self.state[3]
-        velocidad = self.state[4]
+        posX = self.x
+        posY = self.y
+        posZ = self.z
+        angulacion = self.angulacion
+        velocidad = self.velocidad
         # Velocidad random
         velocidad = np.random.uniform(low=0, high=1)
 
@@ -74,31 +76,29 @@ class MiEntorno(gym.Env):
 
         # Actualizar la posición basada en velocidad y angulación
         # Simplemente interpretamos velocidad como avance en Z y angulación afecta X
-        desplazamiento = np.array([
-            np.sin(np.radians(angulacion)) * velocidad,  # Efecto en X
-            0,  # Suponemos que no hay movimiento en Y
-            0  # Suponemos que no hay movimiento en Z
-        ])
-        nueva_posicion = posicion + desplazamiento
+        
+        nueva_posicion = posX + np.sin(np.radians(angulacion)) * velocidad
 
         # Clampear la nueva posición dentro de los límites
         nueva_posicion = np.clip(nueva_posicion, -1, 1)
 
         # Actualizar el estado
-        self.state = np.concatenate([nueva_posicion, [angulacion, velocidad]])
+        self.x = nueva_posicion
+        self.angulacion = angulacion
+        self.velocidad = velocidad
         
         # Calcular la recompensa
         reward = self.reward_func()
 
         # Devuelve el nuevo estado, la recompensa, si terminó, y un diccionario vacío
-        return self.state, reward, done, {}
+        return self.x, reward, done, {}
 
     def reward_func(self):
         """
         Calcula la recompensa basada en la distancia al centro ideal.
         """
-        posicion = self.state[:3]
-        desviacion = np.linalg.norm(posicion - self.centro_ideal)  # Distancia euclidiana al centro ideal
+        posicion = self.x
+        desviacion = abs(posicion - self.centro_ideal)  # Distancia euclidiana al centro ideal
         
         # Normalizar la recompensa: cuanto más cerca del centro, mayor es
         recompensa = max(0, 1 - desviacion)  # Clampeamos entre 0 y 1
@@ -108,10 +108,12 @@ class MiEntorno(gym.Env):
         """
         Muestra el estado actual del entorno.
         """
-        posicion = self.state[:3]
-        angulacion = self.state[3]
-        velocidad = self.state[4]
-        print(f"Posición: {posicion}, Angulación: {angulacion}, Velocidad: {velocidad}")
+        posX = self.x
+        posY = self.y
+        posZ = self.z
+        angulacion = self.angulacion
+        velocidad = self.velocidad
+        print(f"Posición: {posX, posY, posZ}, Angulación: {angulacion}, Velocidad: {velocidad}")
 
     def close(self):
         """
