@@ -4,10 +4,10 @@ import logging
 
 ERROR = 0.1
 
-logging.basicConfig(filename='logs/deepracer_log.txt', 
+logging.basicConfig(filename='logs/deepracer_log.log', 
                     level=logging.INFO, 
                     format='%(asctime)s - %(message)s')
-logger = logging.getLogger()
+
 
 def main():
     # Crear una instancia del entorno
@@ -44,7 +44,7 @@ def main():
         
         # Loggear información del paso
         step_count += 1
-        logger.info(f"Step: {step_count}, Action: {action}, Reward: {reward}, Observation: {obs}")
+        logging.info(f"Step: {step_count}, Action: {action}, Reward: {reward}, Observation: {obs}")
         
         # Renderizar el estado actual
         env.render()

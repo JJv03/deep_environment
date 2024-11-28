@@ -20,7 +20,6 @@ class deepracer_env(gym.Env):
     def __init__(self):
         super(deepracer_env, self).__init__()
         
-        # Espacio de observaciones: [X, Y, Z, angulación, velocidad]
         # X, Y, Z están en el rango [-1, 1], angulación en [-30, 30] grados, velocidad en [0, 1].
         self.x = np.random.uniform(low=-1, high=1)
         self.y = 0.0
