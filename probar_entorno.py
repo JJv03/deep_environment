@@ -1,17 +1,17 @@
-import logging
-from mi_entorno import Deepracer
+from deepracer_env import deepracer_env
 import numpy as np
-
-# Configurar el logging
-logging.basicConfig(filename='logs/entrenamiento.log', level=logging.INFO, 
-                    format='%(asctime)s - %(message)s')
+import logging
 
 ERROR = 0.1
 
+logging.basicConfig(filename='logs/deepracer_log.txt', 
+                    level=logging.INFO, 
+                    format='%(asctime)s - %(message)s')
+logger = logging.getLogger()
+
 def main():
     # Crear una instancia del entorno
-    env = Deepracer()
-    logging.info("Inicio de prueba del entorno.")
+    env = deepracer_env()
     
     obs, info = env.reset()
     done = False
@@ -43,14 +43,13 @@ def main():
         print("Reward: ", reward)
         
         # Loggear información del paso
-        logging.info(f"Step: {step_count}, Action: {action}, Reward: {reward}, State: {obs}")
         step_count += 1
+        logger.info(f"Step: {step_count}, Action: {action}, Reward: {reward}, Observation: {obs}")
         
         # Renderizar el estado actual
         env.render()
 
     env.close()
-    logging.info("Prueba del entorno finalizada.")
 
 if __name__ == "__main__":
     main()
