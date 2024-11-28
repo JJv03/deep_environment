@@ -1,5 +1,5 @@
 import logging
-from mi_entorno import MiEntorno
+from mi_entorno import Deepracer
 import numpy as np
 
 # Configurar el logging
@@ -10,7 +10,7 @@ ERROR = 0.1
 
 def main():
     # Crear una instancia del entorno
-    env = MiEntorno()
+    env = Deepracer()
     logging.info("Inicio de prueba del entorno.")
     
     obs, info = env.reset()
