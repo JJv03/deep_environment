@@ -10,6 +10,11 @@ from sensor_msgs.msg import Image as sensor_image
 import cv2
 from cv_bridge import CvBridge
 from gazebo_msgs.msg import ModelStates
+from PIL import Image
+
+TRAINING_IMAGE_SIZE = (160, 120)
+SLEEP_WAITING_FOR_IMAGE_TIME_IN_SECOND = 0.01
+SLEEP_BETWEEN_ACTION_AND_REWARD_CALCULATION_TIME_IN_SECOND = 0.1
 
 class deepracer_env(gym.Env):
     """
@@ -19,49 +24,68 @@ class deepracer_env(gym.Env):
     """
     def __init__(self):
         super(deepracer_env, self).__init__()
-        
+
         # X, Y, Z están en el rango [-1, 1], angulación en [-30, 30] grados, velocidad en [0, 1].
-        self.x = np.random.uniform(low=-1, high=1)
+        self.x = 0.0
         self.y = 0.0
         self.z = 0.0
+
+        self.distance_from_center = 0
+        self.distance_from_border_1 = 0
+        self.distance_from_border_2 = 0
+
+        self.steps = 0
+
+        self.max_steps = 100
+
+        # actions -> steering angle, throttle
+        self.ack_publisher = rospy.Publisher('/vesc/low_level/ackermann_cmd_mux/output', AckermannDriveStamped, queue_size=100)
+        self.angulacion = 0
+        self.velocidad = 0
+
+        # camara
+        rospy.Subscriber('/camera/zed/rgb/image_rect_color', sensor_image, self.callback_image)
+        self.image = None
+
+        # posiciones
+        rospy.Subscriber('/gazebo/model_states', ModelStates, self.callback_model_states)
         self.model_position = np.zeros(3)  # Para guardar posición (x, y, z)
         self.model_orientation = np.zeros(4)  # Para guardar orientación (x, y, z, w)
-        self.angulacion = 0.0
-        self.velocidad = 0.0
 
-        self.ack_publisher = rospy.Publisher('/vesc/low_level/ackermann_cmd_mux/output',
-                                                 AckermannDriveStamped, queue_size=100)
-        rospy.Subscriber('/camera/zed/rgb/image_rect_color', sensor_image, self.callback_image)
-        rospy.Subscriber('/gazebo/model_states', ModelStates, self.callback_model_states)
         self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
         self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
-        rospy.init_node('rl_coach', anonymous=True)
-
-        # Espacio de acciones: 3 acciones posibles (0: izquierda, 1: recto, 2: derecha)
-        self.action_space = spaces.Discrete(3)
+        rospy.init_node('rl_coach', anonymous=True) # CAMBIAR "rl_coach" hay que cambiarlo
         
         # Variables del estado
+        self.reward = None
+        self.done = False
         self.state = None
-        self.max_steps = 100
-        self.current_step = 0
-        
-        # Parámetros del entorno
-        self.centro_ideal = 0  # Posición ideal en el espacio 3D
-
-        self.image = None
 
     def reset(self):
         """
         Reinicia el entorno y devuelve un estado inicial.
         """
+        rospy.wait_for_service('/gazebo/pause_physics')
+        try:
+            #resp_pause = pause.call()
+            self.pause()
+        except (rospy.ServiceException) as e:
+            print ("/gazebo/unpause_physics service call failed")
+
+        rospy.wait_for_service('/gazebo/unpause_physics')
+        try:
+            #resp_pause = pause.call()
+            self.unpause()
+        except (rospy.ServiceException) as e:
+            print ("/gazebo/pause_physics service call failed")
+        
+        self.reward = None
+        self.done = False
+        self.state = None
+        self.image = None
+        self.steps = 0
         # Inicializa el estado con valores aleatorios en los rangos definidos
-        self.x = np.random.uniform(low=-1, high=1)
-        self.y = 0
-        self.z = 0
-        self.angulacion = 0  # Angulación inicial
-        # velocidad = np.random.uniform(low=0, high=1)  # Velocidad inicial
-        self.velocidad = 0
-        self.current_step = 0
+        self.send_action(0, 0)  # set the throttle to 0
         return self.state, {}  # Devuelve el estado inicial y un diccionario vacío
 
     def step(self, action):
@@ -76,12 +100,12 @@ class deepracer_env(gym.Env):
         except (rospy.ServiceException) as e:
             print ("/gazebo/pause_physics service call failed")
 
-        self.current_step += 1
-        done = self.current_step >= self.max_steps  # Termina el episodio después de max_steps
+        self.steps += 1
+        done = self.steps >= self.max_steps  # Termina el episodio después de max_steps
 
         # Saca imagen en los pasos 49 y 99 si hay imagen
-        if self.current_step in [49, 99] and self.image is not None:
-            image_filename = os.path.join("logs", f"step_{self.current_step}.jpg") # logs es el directorio donde se guarda
+        if self.steps in [49, 99] and self.image is not None:
+            image_filename = os.path.join("logs", f"step_{self.steps}.jpg") # logs es el directorio donde se guarda
             cv_image = CvBridge().imgmsg_to_cv2(self.image, "bgr8")  # Convertir a formato OpenCV
             cv2.imwrite(image_filename, cv_image)
             print(f"Imagen guardada en: {image_filename}")
