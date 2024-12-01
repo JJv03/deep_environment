@@ -1,7 +1,6 @@
 import os
 import time
 import gymnasium as gym
-from gymnasium import spaces
 import numpy as np
 from ackermann_msgs.msg import AckermannDriveStamped
 import rospy
@@ -10,9 +9,8 @@ from sensor_msgs.msg import Image as sensor_image
 import cv2
 from cv_bridge import CvBridge
 from gazebo_msgs.msg import ModelStates
-from PIL import Image
 
-TRAINING_IMAGE_SIZE = (160, 120)
+TRAINING_IMAGE_SIZE = (640, 480)
 SLEEP_WAITING_FOR_IMAGE_TIME_IN_SECOND = 0.01
 SLEEP_BETWEEN_ACTION_AND_REWARD_CALCULATION_TIME_IN_SECOND = 0.1
 
@@ -65,6 +63,11 @@ class deepracer_env(gym.Env):
         """
         Reinicia el entorno y devuelve un estado inicial.
         """
+
+        """
+        Falta añadir poner al coche en la salida concreta o suponer que siempre que se llama a reset se pone
+        """
+
         rospy.wait_for_service('/gazebo/pause_physics')
         try:
             #resp_pause = pause.call()
