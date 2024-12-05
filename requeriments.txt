@@ -1,0 +1,13 @@
+numpy
+gymnasium
+ackermann-msgs
+rospy
+std-srvs
+sensor-msgs
+gazebo-msgs
+cv-bridge
+opencv-python
+stable-baselines3
+torch
+torchvision
+tensorboard
